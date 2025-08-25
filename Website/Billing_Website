@@ -1,0 +1,64 @@
+<?php
+// Koneksi ke database
+$host = "localhost";
+$user = "kamailio";
+$pass = "kamailiorw";
+$db   = "kamailio";
+
+$conn = new mysqli($host, $user, $pass, $db);
+
+// Cek koneksi
+if ($conn->connect_error) {
+    die("Koneksi gagal: " . $conn->connect_error);
+}
+
+// Query ambil data durasi dan tarif
+$sql = "
+SELECT 
+  a.callid,
+  a.src_user AS caller,
+  b.dst_user AS callee,
+  TIMESTAMPDIFF(SECOND, a.time, b.time) AS duration_seconds,
+  TIMESTAMPDIFF(SECOND, a.time, b.time) * 100 AS tarif_rupiah
+FROM 
+  acc a
+JOIN 
+  acc b ON a.callid = b.callid
+WHERE 
+  a.method = 'INVITE' 
+  AND b.method = 'BYE'
+ORDER BY 
+  b.time DESC
+";
+
+$result = $conn->query($sql);
+
+// Tampilkan di tabel HTML
+echo "<h2>Data Panggilan</h2>";
+echo "<table border='1' cellpadding='5'>
+<tr>
+<th>Call ID</th>
+<th>Caller</th>
+<th>Callee</th>
+<th>Durasi (detik)</th>
+<th>Tarif (Rp)</th>
+</tr>";
+
+if ($result->num_rows > 0) {
+    while($row = $result->fetch_assoc()) {
+        echo "<tr>
+        <td>{$row['callid']}</td>
+        <td>{$row['caller']}</td>
+        <td>{$row['callee']}</td>
+        <td>{$row['duration_seconds']}</td>
+        <td>{$row['tarif_rupiah']}</td>
+        </tr>";
+    }
+} else {
+    echo "<tr><td colspan='5'>Tidak ada data</td></tr>";
+}
+
+echo "</table>";
+
+$conn->close();
+?>
